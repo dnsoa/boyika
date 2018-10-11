@@ -72,12 +72,12 @@ type PluginsState struct {
 
 func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 	queryPlugins := &[]Plugin{}
-	
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginGoogleHttpsDNS)))
 
 	responsePlugins := &[]Plugin{}
-	
+
 	loggingPlugins := &[]Plugin{}
-	
+
 	for _, plugin := range *queryPlugins {
 		if err := plugin.Init(proxy); err != nil {
 			return err

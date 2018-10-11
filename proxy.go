@@ -102,7 +102,6 @@ func (proxy *Proxy) tcpListenerFromAddr(listenAddr *net.TCPAddr) error {
 }
 
 func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string, query []byte, clientAddr *net.Addr, clientPc net.Conn) {
-	dlog.Debug(query)
 	if len(query) < MinDNSPacketSize {
 		return
 	}
