@@ -72,8 +72,9 @@ type PluginsState struct {
 
 func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 	queryPlugins := &[]Plugin{}
-	*queryPlugins = append(*queryPlugins, Plugin(new(PluginGoogleHttpsDNS)))
-
+	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginGoogleHttpsDNS)))
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginCloudFlare)))
+	
 	responsePlugins := &[]Plugin{}
 
 	loggingPlugins := &[]Plugin{}
