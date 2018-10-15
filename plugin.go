@@ -72,10 +72,13 @@ type PluginsState struct {
 
 func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 	queryPlugins := &[]Plugin{}
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginCache)))
 	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginGoogleHttpsDNS)))
-	*queryPlugins = append(*queryPlugins, Plugin(new(PluginCloudFlare)))
-	
+	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginCloudFlare)))
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginForward)))
+
 	responsePlugins := &[]Plugin{}
+	*responsePlugins = append(*responsePlugins, Plugin(new(PluginCacheResponse)))
 
 	loggingPlugins := &[]Plugin{}
 
@@ -160,7 +163,7 @@ func (pluginsState *PluginsState) ApplyQueryPlugins(pluginsGlobals *PluginsGloba
 }
 
 func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGlobals, packet []byte, ttl *uint32) ([]byte, error) {
-	if len(*pluginsGlobals.responsePlugins) == 0 && len(*pluginsGlobals.loggingPlugins) == 0 {
+	if len(*pluginsGlobals.responsePlugins) == 0 {
 		return packet, nil
 	}
 	pluginsState.action = PluginsActionForward
