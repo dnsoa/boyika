@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jedisct1/dlog"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 )
@@ -58,7 +56,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	if err != nil {
 		return err
 	}
-	ttl := getMinTTL(msg, pluginsState.cacheMinTTL, pluginsState.cacheMaxTTL, pluginsState.cacheNegMinTTL, pluginsState.cacheNegMaxTTL)
+	ttl := getMinTTL(msg, 600, 86400, 60, 600)
 	cachedResponse := CachedResponse{
 		expiration: time.Now().Add(ttl),
 		msg:        *msg,
@@ -66,7 +64,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	plugin.cachedResponses.Lock()
 	defer plugin.cachedResponses.Unlock()
 	if plugin.cachedResponses.cache == nil {
-		plugin.cachedResponses.cache, err = lru.NewARC(pluginsState.cacheSize)
+		plugin.cachedResponses.cache, err = lru.NewARC(512)
 		if err != nil {
 			return err
 		}
@@ -123,7 +121,6 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	}
 
 	updateTTL(&cached.msg, cached.expiration)
-	dlog.Debugf("hit cache")
 	synth := cached.msg
 	synth.Id = msg.Id
 	synth.Response = true

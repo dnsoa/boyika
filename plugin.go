@@ -172,6 +172,7 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 		if len(packet) >= MinDNSPacketSize && HasTCFlag(packet) {
 			err = nil
 		}
+		dlog.Errorf("ERR :%s ", err)
 		return packet, err
 	}
 	switch Rcode(packet) {
@@ -189,11 +190,13 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 		if ret := plugin.Eval(pluginsState, &msg); ret != nil {
 			pluginsGlobals.RUnlock()
 			pluginsState.action = PluginsActionDrop
+			dlog.Errorf("RET :%s ", ret)
 			return packet, ret
 		}
 		if pluginsState.action == PluginsActionReject {
 			synth, err := RefusedResponseFromMessage(&msg)
 			if err != nil {
+				dlog.Errorf("ERR :%s ", err)
 				return nil, err
 			}
 			dlog.Infof("Blocking [%s]", synth.Question[0].Name)
@@ -209,6 +212,7 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 	}
 	packet2, err := msg.PackBuffer(packet)
 	if err != nil {
+
 		return packet, err
 	}
 	return packet2, nil

@@ -13,6 +13,7 @@ type Proxy struct {
 	daemonize       bool
 	timeout         time.Duration
 	pluginsGlobals  PluginsGlobals
+	db              *DB
 }
 
 func (proxy *Proxy) StartProxy() {
@@ -32,6 +33,10 @@ func (proxy *Proxy) StartProxy() {
 			dlog.Fatal(err)
 		}
 
+	}
+	proxy.db = NewDB()
+	if err := Load("data.bin", proxy.db); err != nil {
+		dlog.Fatal(err)
 	}
 
 	proxy.prefetcher()
@@ -91,6 +96,7 @@ func (proxy *Proxy) tcpListener(acceptPc *net.TCPListener) {
 		}()
 	}
 }
+
 func (proxy *Proxy) tcpListenerFromAddr(listenAddr *net.TCPAddr) error {
 	acceptPc, err := net.ListenTCP("tcp", listenAddr)
 	if err != nil {
@@ -125,6 +131,17 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		}
 	} else {
 		pluginsState.returnCode = PluginsReturnCodeForward
+	}
+	var ttl *uint32
+	response, err = pluginsState.ApplyResponsePlugins(&proxy.pluginsGlobals, response, ttl)
+	if err != nil {
+		pluginsState.returnCode = PluginsReturnCodeParseError
+		dlog.Errorf("ApplyResponsePlugins :%s ", err)
+		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
+		return
+	}
+	if rcode := Rcode(response); rcode == 2 { // SERVFAIL
+		dlog.Infof("Server returned temporary error code [%v] -- Upstream server may be experiencing connectivity issues", rcode)
 	}
 
 	if len(response) < MinDNSPacketSize || len(response) > MaxDNSPacketSize {

@@ -1,0 +1,12 @@
+{
+	"hosts": [
+		{
+			"pattern": "aaa.com",
+			"data": "3.3.3.3"
+		},
+		{
+			"pattern": "bbb.com",
+			"data": "2.2.2.2"
+		}
+	]
+}
