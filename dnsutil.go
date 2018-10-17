@@ -23,7 +23,8 @@ func TruncatedResponse(packet []byte) ([]byte, error) {
 }
 
 func EmptyResponseFromMessage(srcMsg *dns.Msg) (*dns.Msg, error) {
-	dstMsg := srcMsg
+	dstMsg := new(dns.Msg)
+	*dstMsg = *srcMsg
 	dstMsg.Response = true
 	dstMsg.Answer = make([]dns.RR, 0)
 	dstMsg.Ns = make([]dns.RR, 0)

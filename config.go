@@ -15,11 +15,11 @@ import (
 )
 
 type Config struct {
-	LogLevel        int      `toml:"log_level"`
-	LogFile         *string  `toml:"log_file"`
-	UseSyslog       bool     `toml:"use_syslog"`
-	UpdateServer    string   `toml:update_server`
-	Daemonize                bool
+	LogLevel        int     `toml:"log_level"`
+	LogFile         *string `toml:"log_file"`
+	UseSyslog       bool    `toml:"use_syslog"`
+	UpdateServer    string  `toml:update_server`
+	Daemonize       bool
 	ListenAddresses []string `toml:"listen_addresses"`
 }
 
@@ -93,15 +93,16 @@ func ConfigLoad(proxy *Proxy, svcFlag *string) error {
 	}
 	proxy.listenAddresses = config.ListenAddresses
 	proxy.daemonize = config.Daemonize
-
+	proxy.db = NewDB()
+	if err := Load("data.bin", proxy.db); err != nil {
+		dlog.Fatal(err)
+	}
 	if *check {
 		dlog.Notice("Configuration successfully checked")
 		os.Exit(0)
 	}
 	return nil
 }
-
-
 
 func cdFileDir(fileName string) {
 	os.Chdir(filepath.Dir(fileName))

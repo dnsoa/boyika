@@ -46,6 +46,8 @@ func TestWriteDB02(t *testing.T) {
 				Data:    "2.2.2.2",
 			},
 		},
+		BlockName: []string{"a1.com", "a2.com"},
+		BlockIp:   []string{"1.1.1.1", "2.2.*"},
 	}
 	err = Save("data.bin", test)
 	if err != nil {

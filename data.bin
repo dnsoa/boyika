@@ -8,5 +8,13 @@
 			"pattern": "bbb.com",
 			"data": "2.2.2.2"
 		}
+	],
+	"block_name": [
+		"a1.com",
+		"a2.com"
+	],
+	"block_ip": [
+		"1.1.1.1",
+		"2.2.*"
 	]
 }

@@ -34,10 +34,6 @@ func (proxy *Proxy) StartProxy() {
 		}
 
 	}
-	proxy.db = NewDB()
-	if err := Load("data.bin", proxy.db); err != nil {
-		dlog.Fatal(err)
-	}
 
 	proxy.prefetcher()
 }
@@ -120,13 +116,11 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			response, err = pluginsState.synthResponse.PackBuffer(response)
 			if err != nil {
 				pluginsState.returnCode = PluginsReturnCodeParseError
-				pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 				return
 			}
 		}
 		if pluginsState.action == PluginsActionDrop {
 			pluginsState.returnCode = PluginsReturnCodeDrop
-			pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 			return
 		}
 	} else {
@@ -136,8 +130,6 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	response, err = pluginsState.ApplyResponsePlugins(&proxy.pluginsGlobals, response, ttl)
 	if err != nil {
 		pluginsState.returnCode = PluginsReturnCodeParseError
-		dlog.Errorf("ApplyResponsePlugins :%s ", err)
-		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 		return
 	}
 	if rcode := Rcode(response); rcode == 2 { // SERVFAIL
@@ -146,7 +138,6 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 
 	if len(response) < MinDNSPacketSize || len(response) > MaxDNSPacketSize {
 		pluginsState.returnCode = PluginsReturnCodeParseError
-		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 		return
 	}
 	if clientProto == "udp" {
@@ -154,7 +145,6 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			response, err = TruncatedResponse(response)
 			if err != nil {
 				pluginsState.returnCode = PluginsReturnCodeParseError
-				pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 				return
 			}
 		}
@@ -163,12 +153,10 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		response, err = PrefixWithSize(response)
 		if err != nil {
 			pluginsState.returnCode = PluginsReturnCodeParseError
-			pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 			return
 		}
 		clientPc.Write(response)
 	}
-	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 }
 
 func NewProxy() Proxy {

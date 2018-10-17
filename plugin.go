@@ -12,6 +12,14 @@ import (
 type PluginsAction int
 
 const (
+	RecordActionNone = 1 << iota
+	RecordActionNoneCached
+	RecordActionDrop
+	RecordActionReject
+	RecordActionForward
+	RecordActionSynth
+)
+const (
 	PluginsActionNone    = 0
 	PluginsActionForward = 1
 	PluginsActionDrop    = 2
@@ -23,7 +31,6 @@ type PluginsGlobals struct {
 	sync.RWMutex
 	queryPlugins    *[]Plugin
 	responsePlugins *[]Plugin
-	loggingPlugins  *[]Plugin
 }
 
 type PluginsReturnCode int
@@ -53,7 +60,6 @@ var PluginsReturnCodeToString = map[PluginsReturnCode]string{
 }
 
 type PluginsState struct {
-	sessionData            map[string]interface{}
 	action                 PluginsAction
 	originalMaxPayloadSize int
 	maxPayloadSize         int
@@ -73,14 +79,14 @@ type PluginsState struct {
 func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 	queryPlugins := &[]Plugin{}
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginCache)))
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginHosts)))
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginBlockName)))
 	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginGoogleHttpsDNS)))
 	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginCloudFlare)))
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginForward)))
 
 	responsePlugins := &[]Plugin{}
 	*responsePlugins = append(*responsePlugins, Plugin(new(PluginCacheResponse)))
-
-	loggingPlugins := &[]Plugin{}
 
 	for _, plugin := range *queryPlugins {
 		if err := plugin.Init(proxy); err != nil {
@@ -92,15 +98,8 @@ func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 			return err
 		}
 	}
-	for _, plugin := range *loggingPlugins {
-		if err := plugin.Init(proxy); err != nil {
-			return err
-		}
-	}
-
 	(*pluginsGlobals).queryPlugins = queryPlugins
 	(*pluginsGlobals).responsePlugins = responsePlugins
-	(*pluginsGlobals).loggingPlugins = loggingPlugins
 	return nil
 }
 
@@ -124,7 +123,7 @@ func NewPluginsState(proxy *Proxy, clientProto string, clientAddr *net.Addr) Plu
 }
 
 func (pluginsState *PluginsState) ApplyQueryPlugins(pluginsGlobals *PluginsGlobals, packet []byte) ([]byte, error) {
-	if len(*pluginsGlobals.queryPlugins) == 0 && len(*pluginsGlobals.loggingPlugins) == 0 {
+	if len(*pluginsGlobals.queryPlugins) == 0 {
 		return packet, nil
 	}
 	pluginsState.action = PluginsActionForward
@@ -207,32 +206,13 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 		}
 	}
 	pluginsGlobals.RUnlock()
-	if ttl != nil {
-		setMaxTTL(&msg, *ttl)
-	}
+	// if ttl != nil {
+	// 	setMaxTTL(&msg, *ttl)
+	// }
 	packet2, err := msg.PackBuffer(packet)
 	if err != nil {
 
 		return packet, err
 	}
 	return packet2, nil
-}
-
-func (pluginsState *PluginsState) ApplyLoggingPlugins(pluginsGlobals *PluginsGlobals) error {
-	if len(*pluginsGlobals.loggingPlugins) == 0 {
-		return nil
-	}
-	questionMsg := pluginsState.questionMsg
-	if questionMsg == nil || len(questionMsg.Question) > 1 {
-		return errors.New("Unexpected number of questions")
-	}
-	pluginsGlobals.RLock()
-	for _, plugin := range *pluginsGlobals.loggingPlugins {
-		if ret := plugin.Eval(pluginsState, questionMsg); ret != nil {
-			pluginsGlobals.RUnlock()
-			return ret
-		}
-	}
-	pluginsGlobals.RUnlock()
-	return nil
 }

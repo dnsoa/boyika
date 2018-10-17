@@ -5,17 +5,10 @@ package main;
 
 message DB {
      repeated Record hosts = 1;
+     repeated string block_name = 2;
+     repeated string block_ip = 3;
 }
-/*
-Type 
-	UNKNOWN = 0;
-	HOSTS = 1;
-	BLOCK_IP = 2;
-    BLOCK_IPV6 = 3;
-	BLOCK_NAME = 4;
-    FORWARD = 5;
-*/
 message Record {
   string pattern = 1;
-  string data = 3;
+  string data = 2;
 }

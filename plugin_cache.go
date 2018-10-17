@@ -8,6 +8,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/jedisct1/dlog"
 	"github.com/miekg/dns"
 )
 
@@ -49,6 +50,13 @@ func (plugin *PluginCacheResponse) Reload() error {
 
 func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 	plugin.cachedResponses = &cachedResponses
+	if opt := pluginsState.questionMsg.IsEdns0(); opt != nil {
+		for _, option := range opt.Option {
+			if option.Option() == dns.EDNS0SUBNET {
+				return nil
+			}
+		}
+	}
 	if msg.Rcode != dns.RcodeSuccess && msg.Rcode != dns.RcodeNameError && msg.Rcode != dns.RcodeNotAuth {
 		return nil
 	}
@@ -101,7 +109,15 @@ func (plugin *PluginCache) Reload() error {
 
 func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 	plugin.cachedResponses = &cachedResponses
-
+	if opt := msg.IsEdns0(); opt != nil {
+		for _, option := range opt.Option {
+			if option.Option() == dns.EDNS0SUBNET {
+				edns0Subnet := option.(*dns.EDNS0_SUBNET)
+				dlog.Debugf("edns0Subnet :%s/%d", edns0Subnet.Address, edns0Subnet.SourceNetmask)
+				return nil
+			}
+		}
+	}
 	cacheKey, err := computeCacheKey(pluginsState, msg)
 	if err != nil {
 		return nil
@@ -121,6 +137,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	}
 
 	updateTTL(&cached.msg, cached.expiration)
+	dlog.Debugf("%s hit cache", msg.Question[0].Name)
 	synth := cached.msg
 	synth.Id = msg.Id
 	synth.Response = true

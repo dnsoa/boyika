@@ -22,20 +22,20 @@ const (
 )
 
 type PatternMatcher struct {
-	blockedPrefixes   *critbitgo.Trie
-	blockedSuffixes   *critbitgo.Trie
-	blockedSubstrings []string
-	blockedPatterns   []string
-	blockedExact      map[string]interface{}
-	indirectVals      map[string]interface{}
+	Prefixes     *critbitgo.Trie
+	Suffixes     *critbitgo.Trie
+	Substrings   []string
+	Patterns     []string
+	Exact        map[string]interface{}
+	indirectVals map[string]interface{}
 }
 
 func NewPatternPatcher() *PatternMatcher {
 	patternMatcher := PatternMatcher{
-		blockedPrefixes: critbitgo.NewTrie(),
-		blockedSuffixes: critbitgo.NewTrie(),
-		blockedExact:    make(map[string]interface{}),
-		indirectVals:    make(map[string]interface{}),
+		Prefixes:     critbitgo.NewTrie(),
+		Suffixes:     critbitgo.NewTrie(),
+		Exact:        make(map[string]interface{}),
+		indirectVals: make(map[string]interface{}),
 	}
 	return &patternMatcher
 }
@@ -51,111 +51,110 @@ func isGlobCandidate(str string) bool {
 	return false
 }
 
-func (patternMatcher *PatternMatcher) Add(pattern string, val interface{}, position int) (PatternType, error) {
+func (patternMatcher *PatternMatcher) Add(pattern string, val interface{}) (PatternType, error) {
 	leadingStar := strings.HasPrefix(pattern, "*")
 	trailingStar := strings.HasSuffix(pattern, "*")
-	exact := strings.HasPrefix(pattern, "=")
 	patternType := PatternTypeNone
 	if isGlobCandidate(pattern) {
 		patternType = PatternTypePattern
 		_, err := filepath.Match(pattern, "example.com")
 		if len(pattern) < 2 || err != nil {
-			return patternType, fmt.Errorf("Syntax error in block rules at pattern %d", position)
+			return patternType, fmt.Errorf("Syntax error in pattern %s", pattern)
 		}
 	} else if leadingStar && trailingStar {
 		patternType = PatternTypeSubstring
 		if len(pattern) < 3 {
-			return patternType, fmt.Errorf("Syntax error in block rules at pattern %d", position)
+			return patternType, fmt.Errorf("Syntax error in pattern %s", pattern)
 		}
 		pattern = pattern[1 : len(pattern)-1]
 	} else if trailingStar {
 		patternType = PatternTypePrefix
 		if len(pattern) < 2 {
-			return patternType, fmt.Errorf("Syntax error in block rules at pattern %d", position)
+			return patternType, fmt.Errorf("Syntax error in pattern %s", pattern)
 		}
 		pattern = pattern[:len(pattern)-1]
-	} else if exact {
-		patternType = PatternTypeExact
-		if len(pattern) < 2 {
-			return patternType, fmt.Errorf("Syntax error in block rules at pattern %d", position)
-		}
-		pattern = pattern[1:]
-	} else {
+	} else if leadingStar {
 		patternType = PatternTypeSuffix
 		if leadingStar {
 			pattern = pattern[1:]
 		}
 		pattern = strings.TrimPrefix(pattern, ".")
+
+	} else {
+		patternType = PatternTypeExact
+		if len(pattern) < 2 {
+			return patternType, fmt.Errorf("Syntax error in pattern %s", pattern)
+		}
 	}
 	if len(pattern) == 0 {
-		dlog.Errorf("Syntax error in block rule at line %d", position)
+		dlog.Errorf("Syntax error in pattern %s", pattern)
 	}
 
 	pattern = strings.ToLower(pattern)
 	switch patternType {
 	case PatternTypeSubstring:
-		patternMatcher.blockedSubstrings = append(patternMatcher.blockedSubstrings, pattern)
+		patternMatcher.Substrings = append(patternMatcher.Substrings, pattern)
 		if val != nil {
 			patternMatcher.indirectVals[pattern] = val
 		}
 	case PatternTypePattern:
-		patternMatcher.blockedPatterns = append(patternMatcher.blockedPatterns, pattern)
+		patternMatcher.Patterns = append(patternMatcher.Patterns, pattern)
 		if val != nil {
 			patternMatcher.indirectVals[pattern] = val
 		}
 	case PatternTypePrefix:
-		patternMatcher.blockedPrefixes.Insert([]byte(pattern), val)
+		patternMatcher.Prefixes.Insert([]byte(pattern), val)
 	case PatternTypeSuffix:
-		patternMatcher.blockedSuffixes.Insert([]byte(StringReverse(pattern)), val)
+		patternMatcher.Suffixes.Insert([]byte(StringReverse(pattern)), val)
 	case PatternTypeExact:
-		patternMatcher.blockedExact[pattern] = val
+		patternMatcher.Exact[pattern] = val
 	default:
 		dlog.Fatal("Unexpected block type")
 	}
 	return patternType, nil
 }
 
-func (patternMatcher *PatternMatcher) Eval(qName string) (reject bool, reason string, val interface{}) {
+func (patternMatcher *PatternMatcher) Eval(qName string) (reason string, val interface{}) {
 	if len(qName) < 2 {
-		return false, "", nil
+		return "", nil
 	}
 
 	revQname := StringReverse(qName)
-	if match, xval, found := patternMatcher.blockedSuffixes.LongestPrefix([]byte(revQname)); found {
+	if match, xval, found := patternMatcher.Suffixes.LongestPrefix([]byte(revQname)); found {
 		if len(match) == len(qName) || revQname[len(match)] == '.' {
-			return true, "*." + StringReverse(string(match)), xval
+			return "*." + StringReverse(string(match)), xval
 		}
 		if len(match) < len(revQname) && len(revQname) > 0 {
 			if i := strings.LastIndex(revQname, "."); i > 0 {
 				pName := revQname[:i]
-				if match, _, found := patternMatcher.blockedSuffixes.LongestPrefix([]byte(pName)); found {
+				if match, _, found := patternMatcher.Suffixes.LongestPrefix([]byte(pName)); found {
 					if len(match) == len(pName) || pName[len(match)] == '.' {
-						return true, "*." + StringReverse(string(match)), xval
+						return "*." + StringReverse(string(match)), xval
 					}
 				}
 			}
 		}
 	}
 
-	if match, xval, found := patternMatcher.blockedPrefixes.LongestPrefix([]byte(qName)); found {
-		return true, string(match) + "*", xval
+	if match, xval, found := patternMatcher.Prefixes.LongestPrefix([]byte(qName)); found {
+		return string(match) + "*", xval
 	}
 
-	for _, substring := range patternMatcher.blockedSubstrings {
+	for _, substring := range patternMatcher.Substrings {
 		if strings.Contains(qName, substring) {
-			return true, "*" + substring + "*", patternMatcher.indirectVals[substring]
+			return "*" + substring + "*", patternMatcher.indirectVals[substring]
 		}
 	}
 
-	for _, pattern := range patternMatcher.blockedPatterns {
+	for _, pattern := range patternMatcher.Patterns {
 		if found, _ := filepath.Match(pattern, qName); found {
-			return true, pattern, patternMatcher.indirectVals[pattern]
+			return pattern, patternMatcher.indirectVals[pattern]
 		}
 	}
 
-	if xval := patternMatcher.blockedExact[qName]; xval != nil {
-		return true, qName, xval
+	if xval := patternMatcher.Exact[qName]; xval != nil {
+		return qName, xval
 	}
 
-	return false, "", nil
+	return "", nil
 }
