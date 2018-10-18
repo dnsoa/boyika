@@ -19,6 +19,9 @@ type Config struct {
 	LogFile         *string `toml:"log_file"`
 	UseSyslog       bool    `toml:"use_syslog"`
 	UpdateServer    string  `toml:update_server`
+	UpdateToken     string  `toml:update_token`
+	RunMode         string  `toml:run_mode` // local|proxy|cloud
+	DbFile          string  `toml:db_file`
 	Daemonize       bool
 	ListenAddresses []string `toml:"listen_addresses"`
 }

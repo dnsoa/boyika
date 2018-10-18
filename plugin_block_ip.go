@@ -96,7 +96,7 @@ func (plugin *PluginBlockIP) Eval(pluginsState *PluginsState, msg *dns.Msg) erro
 		}
 	}
 	if reject {
-		dlog.Debugf("block ip : %s", reason)
+		dlog.Debugf("Blocking [%s]", reason)
 		pluginsState.action = PluginsActionReject
 	}
 	return nil

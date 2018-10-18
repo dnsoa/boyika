@@ -20,7 +20,7 @@ func (plugin *PluginBlockName) Description() string {
 }
 
 func (plugin *PluginBlockName) Init(proxy *Proxy) error {
-	dlog.Noticef("Loading BlockName config, %+v", proxy.db.GetBlockName())
+	dlog.Notice("Loading BlockName config")
 	plugin.patternMatcher = NewPatternPatcher()
 	for _, name := range proxy.db.GetBlockName() {
 		if _, err := plugin.patternMatcher.Add(name, true); err != nil {
@@ -49,7 +49,7 @@ func (plugin *PluginBlockName) Eval(pluginsState *PluginsState, msg *dns.Msg) er
 	reason, val := plugin.patternMatcher.Eval(qName)
 	if val != nil {
 		pluginsState.action = PluginsActionReject
-		dlog.Debugf("blockname : %s", reason)
+		dlog.Noticef("blockname : %s", reason)
 	}
 	return nil
 }

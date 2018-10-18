@@ -12,14 +12,6 @@ import (
 type PluginsAction int
 
 const (
-	RecordActionNone = 1 << iota
-	RecordActionNoneCached
-	RecordActionDrop
-	RecordActionReject
-	RecordActionForward
-	RecordActionSynth
-)
-const (
 	PluginsActionNone    = 0
 	PluginsActionForward = 1
 	PluginsActionDrop    = 2
@@ -31,32 +23,6 @@ type PluginsGlobals struct {
 	sync.RWMutex
 	queryPlugins    *[]Plugin
 	responsePlugins *[]Plugin
-}
-
-type PluginsReturnCode int
-
-const (
-	PluginsReturnCodePass = iota
-	PluginsReturnCodeForward
-	PluginsReturnCodeDrop
-	PluginsReturnCodeReject
-	PluginsReturnCodeSynth
-	PluginsReturnCodeParseError
-	PluginsReturnCodeNXDomain
-	PluginsReturnCodeResponseError
-	PluginsReturnCodeServerError
-)
-
-var PluginsReturnCodeToString = map[PluginsReturnCode]string{
-	PluginsReturnCodePass:          "PASS",
-	PluginsReturnCodeForward:       "FORWARD",
-	PluginsReturnCodeDrop:          "DROP",
-	PluginsReturnCodeReject:        "REJECT",
-	PluginsReturnCodeSynth:         "SYNTH",
-	PluginsReturnCodeParseError:    "PARSE_ERROR",
-	PluginsReturnCodeNXDomain:      "NXDOMAIN",
-	PluginsReturnCodeResponseError: "RESPONSE_ERROR",
-	PluginsReturnCodeServerError:   "SERVER_ERROR",
 }
 
 type PluginsState struct {
@@ -73,7 +39,6 @@ type PluginsState struct {
 	cacheMinTTL            uint32
 	cacheMaxTTL            uint32
 	questionMsg            *dns.Msg
-	returnCode             PluginsReturnCode
 }
 
 func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
@@ -86,6 +51,7 @@ func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginForward)))
 
 	responsePlugins := &[]Plugin{}
+	*responsePlugins = append(*responsePlugins, Plugin(new(PluginBlockIP)))
 	*responsePlugins = append(*responsePlugins, Plugin(new(PluginCacheResponse)))
 
 	for _, plugin := range *queryPlugins {
@@ -174,30 +140,19 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 		dlog.Errorf("ERR :%s ", err)
 		return packet, err
 	}
-	switch Rcode(packet) {
-	case dns.RcodeSuccess:
-		pluginsState.returnCode = PluginsReturnCodePass
-	case dns.RcodeNameError:
-		pluginsState.returnCode = PluginsReturnCodeNXDomain
-	case dns.RcodeServerFailure:
-		pluginsState.returnCode = PluginsReturnCodeServerError
-	default:
-		pluginsState.returnCode = PluginsReturnCodeResponseError
-	}
 	pluginsGlobals.RLock()
 	for _, plugin := range *pluginsGlobals.responsePlugins {
 		if ret := plugin.Eval(pluginsState, &msg); ret != nil {
 			pluginsGlobals.RUnlock()
 			pluginsState.action = PluginsActionDrop
-			dlog.Errorf("RET :%s ", ret)
 			return packet, ret
 		}
 		if pluginsState.action == PluginsActionReject {
 			synth, err := RefusedResponseFromMessage(&msg)
 			if err != nil {
-				dlog.Errorf("ERR :%s ", err)
 				return nil, err
 			}
+			msg = *synth
 			dlog.Infof("Blocking [%s]", synth.Question[0].Name)
 			pluginsState.synthResponse = synth
 		}
@@ -206,9 +161,9 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 		}
 	}
 	pluginsGlobals.RUnlock()
-	// if ttl != nil {
-	// 	setMaxTTL(&msg, *ttl)
-	// }
+	if ttl != nil {
+		setMaxTTL(&msg, *ttl)
+	}
 	packet2, err := msg.PackBuffer(packet)
 	if err != nil {
 

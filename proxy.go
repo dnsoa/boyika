@@ -14,6 +14,7 @@ type Proxy struct {
 	timeout         time.Duration
 	pluginsGlobals  PluginsGlobals
 	db              *DB
+	externalIP      string
 }
 
 func (proxy *Proxy) StartProxy() {
@@ -34,7 +35,8 @@ func (proxy *Proxy) StartProxy() {
 		}
 
 	}
-
+	proxy.externalIP = getExternalIP()
+	dlog.Noticef("Current IP: %s", proxy.externalIP)
 	proxy.prefetcher()
 }
 
@@ -115,21 +117,17 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		if pluginsState.synthResponse != nil {
 			response, err = pluginsState.synthResponse.PackBuffer(response)
 			if err != nil {
-				pluginsState.returnCode = PluginsReturnCodeParseError
 				return
 			}
 		}
 		if pluginsState.action == PluginsActionDrop {
-			pluginsState.returnCode = PluginsReturnCodeDrop
 			return
 		}
-	} else {
-		pluginsState.returnCode = PluginsReturnCodeForward
 	}
+
 	var ttl *uint32
 	response, err = pluginsState.ApplyResponsePlugins(&proxy.pluginsGlobals, response, ttl)
 	if err != nil {
-		pluginsState.returnCode = PluginsReturnCodeParseError
 		return
 	}
 	if rcode := Rcode(response); rcode == 2 { // SERVFAIL
@@ -137,14 +135,12 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	}
 
 	if len(response) < MinDNSPacketSize || len(response) > MaxDNSPacketSize {
-		pluginsState.returnCode = PluginsReturnCodeParseError
 		return
 	}
 	if clientProto == "udp" {
 		if len(response) > MaxDNSUDPPacketSize {
 			response, err = TruncatedResponse(response)
 			if err != nil {
-				pluginsState.returnCode = PluginsReturnCodeParseError
 				return
 			}
 		}
@@ -152,7 +148,6 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	} else {
 		response, err = PrefixWithSize(response)
 		if err != nil {
-			pluginsState.returnCode = PluginsReturnCodeParseError
 			return
 		}
 		clientPc.Write(response)

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/binary"
+	"io/ioutil"
+	"net/http"
 	"strings"
 	"time"
 
@@ -145,4 +147,14 @@ func updateTTL(msg *dns.Msg, expiration time.Time) {
 		}
 		rr.Header().Ttl = ttl
 	}
+}
+
+func getExternalIP() string {
+	resp, err := http.Get("http://whatismyip.akamai.com")
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	content, _ := ioutil.ReadAll(resp.Body)
+	return string(content)
 }

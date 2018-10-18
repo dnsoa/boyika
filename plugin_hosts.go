@@ -21,7 +21,7 @@ func (plugin *PluginHosts) Description() string {
 }
 
 func (plugin *PluginHosts) Init(proxy *Proxy) error {
-	dlog.Noticef("Loading Hosts config, %+v", proxy.db.GetHosts())
+	dlog.Noticef("Loading Hosts %d rules", len(proxy.db.GetHosts()))
 	plugin.patternMatcher = NewPatternPatcher()
 	for _, v := range proxy.db.GetHosts() {
 		if _, err := plugin.patternMatcher.Add(v.GetPattern(), v.GetData()); err != nil {
