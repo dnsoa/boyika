@@ -48,6 +48,22 @@ func TestWriteDB02(t *testing.T) {
 		},
 		BlockName: []string{"a1.com", "a2.com"},
 		BlockIp:   []string{"1.1.1.1", "2.2.*"},
+		Forward: []*Finder{
+			&Finder{
+				Name:   []string{"8.8.8.8:53", "1.2.4.8:53"},
+				Domain: []string{"baidu.com"},
+			},
+			&Finder{
+				Name:   []string{"1.1.1.1:53"},
+				Domain: []string{"google.com"},
+			},
+		},
+		Doh: []*Finder{
+			&Finder{
+				Name:   []string{"https://dns.google.com/resolve?name={name}&type={type}"},
+				Domain: []string{"www.163.com"},
+			},
+		},
 	}
 	err = Save("data.bin", test)
 	if err != nil {

@@ -46,7 +46,7 @@ func InitPluginsGlobals(pluginsGlobals *PluginsGlobals, proxy *Proxy) error {
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginCache)))
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginHosts)))
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginBlockName)))
-	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginGoogleHttpsDNS)))
+	*queryPlugins = append(*queryPlugins, Plugin(new(PluginDoh)))
 	//*queryPlugins = append(*queryPlugins, Plugin(new(PluginCloudFlare)))
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginForward)))
 

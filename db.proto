@@ -7,7 +7,15 @@ message DB {
      repeated Record hosts = 1;
      repeated string block_name = 2;
      repeated string block_ip = 3;
+     repeated Finder forward = 4;
+     repeated Finder doh = 5;
 }
+
+message Finder {
+  repeated string name =1;
+  repeated string domain = 2;
+}
+
 message Record {
   string pattern = 1;
   string data = 2;

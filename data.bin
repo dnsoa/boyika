@@ -11,12 +11,39 @@
 	],
 	"block_name": [
 		"a1.com",
-		"a2.com",
-        "[0-9]*.[a-z]*.a3.com",
-        "a4.*"
+		"a2.com"
 	],
 	"block_ip": [
-		"115.238.195.152",
+		"1.1.1.1",
 		"2.2.*"
+	],
+	"forward": [
+		{
+			"name": [
+				"8.8.8.8:53",
+				"1.2.4.8:53"
+			],
+			"domain": [
+				"baidu.com"
+			]
+		},
+		{
+			"name": [
+				"1.1.1.1:53"
+			],
+			"domain": [
+				"google.com"
+			]
+		}
+	],
+	"doh": [
+		{
+			"name": [
+				"https://cloudflare-dns.com/dns-query?name={name}\u0026type={type}"
+			],
+			"domain": [
+				"www.163.com"
+			]
+		}
 	]
 }
