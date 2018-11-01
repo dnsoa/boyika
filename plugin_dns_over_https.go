@@ -109,7 +109,7 @@ func (plugin *PluginDoh) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 				}
 				return err
 			}
-			req.Header.Set("Accept", "application/json, application/dns-json, application/dns-message, application/dns-udpwireformat")
+			req.Header.Set("Accept", "application/dns-json")
 			req.Header.Set("User-Agent", "boyika -- https://github.com/dnsoa/boyika")
 			plugin.httpClientMux.RLock()
 			resp, err := plugin.httpClient.Do(req)
@@ -117,19 +117,16 @@ func (plugin *PluginDoh) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 			if err != nil {
 				return err
 			}
-			dlog.Debugf("0 %d", resp.StatusCode)
 			if resp.StatusCode != 200 {
 				return fmt.Errorf("http status code : %d", resp.StatusCode)
 			}
-			dlog.Debug("1")
 			body, err := ioutil.ReadAll(resp.Body)
 
 			if err != nil {
 				return err
 			}
-			dlog.Debug("2")
 			var respJSON jsonDNS.Response
-			dlog.Debugf("body: %s", body)
+
 			err = json.Unmarshal(body, &respJSON)
 			if err != nil {
 				dlog.Errorf("Unmarshal : %s", err)

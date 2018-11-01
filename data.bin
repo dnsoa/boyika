@@ -5,8 +5,8 @@
 			"data": "3.3.3.3"
 		},
 		{
-			"pattern": "bbb.com",
-			"data": "2.2.2.2"
+			"pattern": "dns.google.com",
+			"data":"216.58.204.175"
 		}
 	],
 	"block_name": [
@@ -24,7 +24,7 @@
 				"1.2.4.8:53"
 			],
 			"domain": [
-				"baidu.com"
+				"*.*"
 			]
 		},
 		{
@@ -39,7 +39,8 @@
 	"doh": [
 		{
 			"name": [
-				"https://cloudflare-dns.com/dns-query?name={name}\u0026type={type}"
+				"https://cloudflare-dns.com/dns-query?name={name}\u0026type={type}",
+				"https://dns.google.com/reslove?name={name}\u0026type={type}\u0026dnssec=true\u0026ecs=113.246.106.143%2F24"
 			],
 			"domain": [
 				"www.163.com"
