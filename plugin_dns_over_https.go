@@ -1,21 +1,22 @@
 package main
 
 import (
-	"fmt"
-	"net"
-	"io/ioutil"
 	"encoding/json"
-	"time"
-	"golang.org/x/net/http2"
-	"net/http"
-	"sync"
-	"net/http/cookiejar"
+	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net"
+	"net/http"
+	"net/http/cookiejar"
 	"strings"
+	"sync"
+	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/jedisct1/dlog"
+	jsondns "github.com/m13253/dns-over-https/json-dns"
 	"github.com/miekg/dns"
-	"github.com/m13253/dns-over-https/json-dns"
 )
 
 type DnsOverHttps struct {
@@ -24,11 +25,11 @@ type DnsOverHttps struct {
 }
 
 type PluginDoh struct {
-	cookieJar            http.CookieJar
-	httpClientMux        *sync.RWMutex
-	httpTransport        *http.Transport
-	httpClient           *http.Client
-	matcher []*DnsOverHttps
+	cookieJar     http.CookieJar
+	httpClientMux *sync.RWMutex
+	httpTransport *http.Transport
+	httpClient    *http.Client
+	matcher       []*DnsOverHttps
 }
 
 func (plugin *PluginDoh) Name() string {
@@ -125,16 +126,16 @@ func (plugin *PluginDoh) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 			if err != nil {
 				return err
 			}
-			var respJSON jsonDNS.Response
+			var respJSON jsondns.Response
 
 			err = json.Unmarshal(body, &respJSON)
 			if err != nil {
 				dlog.Errorf("Unmarshal : %s", err)
 				return err
 			}
-			reply := jsonDNS.PrepareReply(msg)
+			reply := jsondns.PrepareReply(msg)
 
-			respMsg := jsonDNS.Unmarshal(reply, &respJSON, udpSize, 255)
+			respMsg := jsondns.Unmarshal(reply, &respJSON, udpSize, 255)
 			pluginsState.synthResponse = respMsg
 			pluginsState.action = PluginsActionSynth
 			break
@@ -146,7 +147,7 @@ func (plugin *PluginDoh) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 func (plugin *PluginDoh) newHTTPClient() error {
 	plugin.httpClientMux.Lock()
 	defer plugin.httpClientMux.Unlock()
-	
+
 	if plugin.httpTransport != nil {
 		plugin.httpTransport.CloseIdleConnections()
 	}
